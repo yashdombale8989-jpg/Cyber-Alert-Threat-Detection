@@ -120,7 +120,7 @@ metrics = {
     ),
 }
 
-joblib.dump(pipe, MODEL_DIR / "cicids2017_random_forest.joblib")
+joblib.dump(pipe, MODEL_DIR / "cicids2017_random_forest.joblib", compress=3)
 (MODEL_DIR / "metrics.json").write_text(json.dumps(metrics, indent=2))
 
 # Train Isolation Forest only on benign training flows.
@@ -143,6 +143,7 @@ if len(normal):
     joblib.dump(
         (fitted_pre, iso),
         MODEL_DIR / "cicids2017_isolation_forest.joblib",
+        compress=3,
     )
     print("Isolation Forest training complete.")
 else:
