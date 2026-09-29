@@ -36,3 +36,40 @@ The dashboard uses real telemetry from the computer running the application. The
 The Canadian Institute for Cybersecurity states that CICIDS2017 provides labeled flow CSVs produced with CICFlowMeter and includes benign traffic and multiple attack scenarios. Cite the dataset paper when using the data.
 
 Official source: https://www.unb.ca/cic/datasets/ids-2017.html
+
+
+## Real-time flow detection
+
+The dashboard has two layers:
+
+1. **System telemetry** from the local machine (connections, CPU, memory).
+2. **CICIDS2017-compatible flow ML** using Random Forest classification plus Isolation Forest anomaly detection.
+
+For passive live network-flow capture, install the requirements, start the FastAPI server, then run:
+
+```bash
+python realtime/start_capture.py --interface <YOUR_INTERFACE>
+```
+
+The capture launcher uses Python CICFlowMeter to extract bidirectional flow features and POST them to `/api/predict-flow`. CICFlowMeter documents live interface capture and HTTP output; the project is based on the same flow-feature approach used for CICIDS-style traffic analysis. citeturn2view0
+
+> Live packet capture requires the operating-system permissions appropriate for packet capture. Capture only traffic you are authorized to monitor.
+
+### Run locally
+
+```bash
+pip install -r requirements.txt
+uvicorn backend.app:app --reload
+```
+
+Open `http://127.0.0.1:8000`.
+
+The trained model files are produced by GitHub Actions. They are not raw CICIDS2017 data and should be kept with the same scikit-learn version used for training.
+
+### Model interpretation
+
+- **Random Forest** returns the CICIDS2017 class label and probability estimate.
+- **Isolation Forest** returns an anomaly flag and anomaly score.
+- The dashboard displays both results for captured flows.
+
+CICIDS2017 contains flow-level statistics such as duration, packet counts, packet lengths, inter-arrival times, TCP flags, and activity statistics. citeturn1search9turn1search0
