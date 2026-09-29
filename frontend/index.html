@@ -40,6 +40,8 @@ td,th{padding:9px;border-bottom:1px solid #263650;text-align:left}
 <h2>Current system alert reasons</h2>
 <div id="reasons">Waiting for telemetry...</div>
 
+<h2>Live ML flow alerts</h2>
+<div class="card"><div id="flowalerts">Waiting for captured network flows...</div></div>
 <h2>Live system events</h2>
 <table><thead><tr><th>Time</th><th>Risk</th><th>Connections</th><th>Remote</th><th>CPU</th><th>Memory</th></tr></thead>
 <tbody id="events"></tbody></table>
@@ -52,6 +54,20 @@ fetch("/api/models").then(r=>r.json()).then(d=>{
   $("iso").textContent=d.isolation_forest?"READY":"MISSING";
   $("models").textContent=d.random_forest&&d.isolation_forest?"READY":"MISSING";
 }).catch(()=>{$("models").textContent="ERROR"});
+
+async function refreshFlowAlerts(){
+  try{
+    const rows=await fetch("/api/alerts").then(r=>r.json());
+    $("flowalerts").innerHTML=rows.length?rows.slice().reverse().map(x=>
+      "<div style='padding:8px 0;border-bottom:1px solid #263650'>"+
+      "<b>"+x.label+"</b> | RF "+(x.confidence==null?"-":(x.confidence*100).toFixed(1)+"%")+
+      " | Isolation "+(x.anomaly?"ANOMALY":"normal")+
+      " | score "+Number(x.anomaly_score).toFixed(4)+
+      " | "+new Date(x.timestamp).toLocaleTimeString()+"</div>"
+    ).join(""):"Waiting for captured network flows...";
+  }catch(e){}
+}
+setInterval(refreshFlowAlerts,2000); refreshFlowAlerts();
 
 const ws=new WebSocket((location.protocol==="https:"?"wss://":"ws://")+location.host+"/ws");
 ws.onmessage=e=>{
