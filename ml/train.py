@@ -17,15 +17,16 @@ MODEL_DIR.mkdir(exist_ok=True)
 
 df = pd.read_csv(DATA)
 df.columns = [c.strip() for c in df.columns]
-if "label" not in df.columns:
-    raise ValueError("Expected a 'label' column in UNSW_NB15_training-set.csv")
+target = "attack_cat" if "attack_cat" in df.columns else "label"
+if target not in df.columns:
+    raise ValueError("Dataset must contain attack_cat or label.")
 
-y = df["label"].astype(int)
-X = df.drop(columns=["label"]).copy()
-X = X.drop(columns=[c for c in ["id"] if c in X.columns])
+y = df[target].fillna("Normal").astype(str)
+X = df.drop(columns=[c for c in ["attack_cat", "label", "id"] if c in df.columns]).copy()
 
 cat = X.select_dtypes(include=["object"]).columns.tolist()
 num = [c for c in X.columns if c not in cat]
+
 pre = ColumnTransformer([
     ("num", Pipeline([("imputer", SimpleImputer(strategy="median"))]), num),
     ("cat", Pipeline([
@@ -41,23 +42,28 @@ clf = RandomForestClassifier(
 pipe = Pipeline([("preprocess", pre), ("classifier", clf)])
 
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42, stratify=y
+    X, y, test_size=0.20, random_state=42, stratify=y
 )
 pipe.fit(X_train, y_train)
 pred = pipe.predict(X_test)
 
 metrics = {
+    "algorithm": "RandomForestClassifier",
+    "target": target,
     "accuracy": float(accuracy_score(y_test, pred)),
     "classification_report": classification_report(y_test, pred, output_dict=True)
 }
 joblib.dump(pipe, MODEL_DIR / "threat_classifier.joblib")
 (MODEL_DIR / "metrics.json").write_text(json.dumps(metrics, indent=2))
 
-normal = X_train[y_train == 0]
-encoded = pre.transform(normal)
-iso = IsolationForest(n_estimators=200, contamination="auto", random_state=42, n_jobs=-1)
-iso.fit(encoded)
-joblib.dump((pre, iso), MODEL_DIR / "anomaly_detector.joblib")
+normal = X_train[y_train.str.lower().eq("normal")]
+if len(normal) > 0:
+    encoded = pre.transform(normal)
+    iso = IsolationForest(n_estimators=200, contamination="auto", random_state=42, n_jobs=-1)
+    iso.fit(encoded)
+    joblib.dump((pre, iso), MODEL_DIR / "anomaly_detector.joblib")
 
 print("Training complete.")
+print("Algorithm:", metrics["algorithm"])
+print("Target:", target)
 print("Accuracy:", round(metrics["accuracy"], 4))
