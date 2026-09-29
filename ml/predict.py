@@ -13,7 +13,13 @@ def load_models():
     iso_pre, iso = joblib.load(ISO_MODEL)
     return rf, iso_pre, iso
 
+def _validate_flow(flow: dict):
+    if not isinstance(flow, dict) or not flow:
+        raise ValueError("flow must be a non-empty JSON object containing CICFlowMeter features")
+
+
 def predict_flow(flow: dict):
+    _validate_flow(flow)
     rf, _, _ = load_models()
     frame = pd.DataFrame([flow])
     label = str(rf.predict(frame)[0])
@@ -26,6 +32,7 @@ def predict_flow(flow: dict):
     }
 
 def predict_anomaly(flow: dict):
+    _validate_flow(flow)
     _, iso_pre, iso = load_models()
     frame = pd.DataFrame([flow])
     encoded = iso_pre.transform(frame)
