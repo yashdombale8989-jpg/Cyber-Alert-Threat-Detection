@@ -6,3 +6,4 @@ scikit-learn==1.6.1
 joblib==1.4.2
 psutil==6.1.1
 pydantic==2.10.4
+cicflowmeter==0.4.0
