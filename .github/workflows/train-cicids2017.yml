@@ -1,0 +1,44 @@
+name: Train CICIDS2017 IDS
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'ml/train.py'
+      - 'requirements.txt'
+      - '.github/workflows/train-cicids2017.yml'
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install training dependencies
+        run: pip install -r requirements.txt datasets pyarrow
+      - name: Download CICIDS2017
+        run: |
+          python - <<'PY'
+          from datasets import load_dataset
+          from pathlib import Path
+          out = Path('data/cicids2017')
+          out.mkdir(parents=True, exist_ok=True)
+          ds = load_dataset('muzom/CIC-IDS2017', split='train')
+          ds.to_csv(out / 'CICIDS2017.csv')
+          print('rows:', len(ds))
+          PY
+      - name: Train Random Forest and Isolation Forest
+        env:
+          CICIDS_MAX_ROWS: '300000'
+        run: python -m ml.train
+      - name: Upload trained model and metrics
+        uses: actions/upload-artifact@v4
+        with:
+          name: cicids2017-model
+          path: |
+            models/cicids2017_random_forest.joblib
+            models/cicids2017_isolation_forest.joblib
+            models/metrics.json
