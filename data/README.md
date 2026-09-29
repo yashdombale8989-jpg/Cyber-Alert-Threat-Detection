@@ -1,19 +1,16 @@
-# Dataset
+CIC-IDS2017 is now the training dataset for this project.
 
-This project uses the official UNSW-NB15 training dataset for defensive intrusion-detection research.
+Official source: https://www.unb.ca/cic/datasets/ids-2017.html
+The official page describes labeled network-flow CSV files with more than 80 flow features and benign traffic plus common attacks including brute force, DoS/DDoS, Heartbleed, web attacks, infiltration and botnet. The full raw capture is large, so the CSV is intentionally not committed to GitHub.
 
-UNSW states that the configured training set contains 175,341 records and the test set contains 82,332 records. The dataset covers normal traffic and nine attack types. Download it from the official UNSW page:
+Recommended layout:
 
-https://research.unsw.edu.au/projects/unsw-nb15-dataset
+    data/cicids2017/*.csv
 
-Place the downloaded file at:
+The training script reads every CSV in that directory, removes identifier fields, combines the files, and can cap the training sample with CICIDS_MAX_ROWS.
 
-data/UNSW_NB15_training-set.csv
+Train locally:
 
-Do not commit the large CSV to GitHub. The training script reads it locally and creates the model artifacts in models/.
+    python -m ml.train
 
-## Train
-
-python -m ml.train
-
-The application also has a separate passive real-time collector. It observes the local machine's OS/network connection metadata and resource statistics. It does not generate traffic or actively scan networks.
+The resulting model is written to models/cicids2017_random_forest.joblib and metrics to models/metrics.json.
