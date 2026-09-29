@@ -1,7 +1,77 @@
 <!doctype html>
-<html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>
-<title>Cyber Alert Threat Detection</title><style>body{font-family:Arial;background:#0b1220;color:#e8eef8;margin:0}main{max-width:1100px;margin:auto;padding:28px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}.card{background:#121d30;border:1px solid #263650;border-radius:14px;padding:18px}.value{font-size:28px;font-weight:700;margin-top:8px}table{width:100%;margin-top:20px;border-collapse:collapse}td,th{padding:9px;border-bottom:1px solid #263650;text-align:left}</style></head>
-<body><main><h1>Cyber Alert Threat Detection</h1><p>Real-time defensive monitoring of the computer running this application.</p>
-<div class='grid'><div class='card'>Risk<div class='value' id='risk'>-</div></div><div class='card'>Connections<div class='value' id='connections'>-</div></div><div class='card'>Established<div class='value' id='established'>-</div></div><div class='card'>Listening<div class='value' id='listening'>-</div></div><div class='card'>Remote endpoints<div class='value' id='remote'>-</div></div><div class='card'>CPU<div class='value' id='cpu'>-</div></div><div class='card'>Memory<div class='value' id='memory'>-</div></div></div>
-<h2>Current alert reasons</h2><div id='reasons'>Waiting for telemetry...</div><h2>Live events</h2><table><thead><tr><th>Time</th><th>Risk</th><th>Connections</th><th>Remote</th><th>CPU</th><th>Memory</th></tr></thead><tbody id='events'></tbody></table>
-<script>const ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws');ws.onmessage=e=>{const d=JSON.parse(e.data);risk.textContent=d.risk;connections.textContent=d.connections_total;established.textContent=d.connections_established;listening.textContent=d.listening_sockets;remote.textContent=d.unique_remote_endpoints;cpu.textContent=d.cpu_percent.toFixed(1)+'%';memory.textContent=d.memory_percent.toFixed(1)+'%';reasons.innerHTML=d.reasons.length?d.reasons.map(x=>'<div>Alert: '+x+'</div>').join(''):'No current rule-based alerts';const tr=document.createElement('tr');tr.innerHTML='<td>'+new Date(d.timestamp).toLocaleTimeString()+'</td><td>'+d.risk+'</td><td>'+d.connections_total+'</td><td>'+d.unique_remote_endpoints+'</td><td>'+d.cpu_percent.toFixed(1)+'%</td><td>'+d.memory_percent.toFixed(1)+'%</td>';events.prepend(tr);while(events.children.length>25)events.lastChild.remove()};</script></main></body></html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cyber Alert Threat Detection</title>
+<style>
+body{font-family:Arial;background:#0b1220;color:#e8eef8;margin:0}
+main{max-width:1150px;margin:auto;padding:28px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}
+.card{background:#121d30;border:1px solid #263650;border-radius:14px;padding:18px}
+.value{font-size:28px;font-weight:700;margin-top:8px}
+.status{display:inline-block;padding:6px 10px;border-radius:8px;background:#263650}
+table{width:100%;margin-top:20px;border-collapse:collapse}
+td,th{padding:9px;border-bottom:1px solid #263650;text-align:left}
+</style>
+</head>
+<body>
+<main>
+<h1>Cyber Alert Threat Detection</h1>
+<p>Real-time defensive monitoring with CICIDS2017 ML inference.</p>
+
+<div class="grid">
+<div class="card">System Risk<div class="value" id="risk">-</div></div>
+<div class="card">Connections<div class="value" id="connections">-</div></div>
+<div class="card">Established<div class="value" id="established">-</div></div>
+<div class="card">Listening<div class="value" id="listening">-</div></div>
+<div class="card">Remote endpoints<div class="value" id="remote">-</div></div>
+<div class="card">CPU<div class="value" id="cpu">-</div></div>
+<div class="card">Memory<div class="value" id="memory">-</div></div>
+<div class="card">ML Models<div class="value" id="models">Checking...</div></div>
+</div>
+
+<h2>ML detection</h2>
+<div class="card">
+<div>Random Forest: <span class="status" id="rf">-</span></div>
+<div style="margin-top:10px">Isolation Forest: <span class="status" id="iso">-</span></div>
+<p id="mlnote">Waiting for a CICIDS2017-compatible flow at /api/predict-flow.</p>
+</div>
+
+<h2>Current system alert reasons</h2>
+<div id="reasons">Waiting for telemetry...</div>
+
+<h2>Live system events</h2>
+<table><thead><tr><th>Time</th><th>Risk</th><th>Connections</th><th>Remote</th><th>CPU</th><th>Memory</th></tr></thead>
+<tbody id="events"></tbody></table>
+
+<script>
+const $=id=>document.getElementById(id);
+
+fetch("/api/models").then(r=>r.json()).then(d=>{
+  $("rf").textContent=d.random_forest?"READY":"MISSING";
+  $("iso").textContent=d.isolation_forest?"READY":"MISSING";
+  $("models").textContent=d.random_forest&&d.isolation_forest?"READY":"MISSING";
+}).catch(()=>{$("models").textContent="ERROR"});
+
+const ws=new WebSocket((location.protocol==="https:"?"wss://":"ws://")+location.host+"/ws");
+ws.onmessage=e=>{
+  const d=JSON.parse(e.data);
+  $("risk").textContent=d.risk;
+  $("connections").textContent=d.connections_total;
+  $("established").textContent=d.connections_established;
+  $("listening").textContent=d.listening_sockets;
+  $("remote").textContent=d.unique_remote_endpoints;
+  $("cpu").textContent=d.cpu_percent.toFixed(1)+"%";
+  $("memory").textContent=d.memory_percent.toFixed(1)+"%";
+  $("reasons").innerHTML=d.reasons.length
+    ?d.reasons.map(x=>"<div>Alert: "+x+"</div>").join("")
+    :"No current rule-based alerts";
+  const tr=document.createElement("tr");
+  tr.innerHTML="<td>"+new Date(d.timestamp).toLocaleTimeString()+"</td><td>"+d.risk+"</td><td>"+d.connections_total+"</td><td>"+d.unique_remote_endpoints+"</td><td>"+d.cpu_percent.toFixed(1)+"%</td><td>"+d.memory_percent.toFixed(1)+"%</td>";
+  $("events").prepend(tr);
+  while($("events").children.length>25)$("events").lastChild.remove();
+};
+</script>
+</main>
+</body>
+</html>
